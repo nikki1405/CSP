@@ -8,11 +8,21 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Search, MapPin, Clock, Package, Users, TrendingUp, Bell, Calendar, IndianRupee } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useDonations, DonationData } from '@/hooks/useDonations';
+import { useMyClaims } from '@/hooks/useMyClaims';
 
 const NGODashboard = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  const { donations, isLoading } = useDonations();
+  const { claims: myClaimedDonations, isLoading: isClaimsLoading, error: claimsError, refetch: refetchClaims } = useMyClaims(user?.uid);
+
+  // Only show available, non-expired donations
+  const availableFood: DonationData[] = donations.filter(donation =>
+    donation.status === 'available' &&
+    (!donation.expiry_time || new Date(donation.expiry_time) > new Date())
+  );
 
   // Mock data for NGO stats
   const stats = {
@@ -21,62 +31,6 @@ const NGODashboard = () => {
     completedClaims: 11,
     peopleServed: 234
   };
-
-  const availableFood = [
-    {
-      id: '1',
-      foodType: 'Fresh Vegetables',
-      quantity: '10 kg',
-      donorName: 'Green Garden Restaurant',
-      location: 'Mumbai Central',
-      availableUntil: '6:00 PM today',
-      distance: '2.3 km',
-      status: 'available'
-    },
-    {
-      id: '2',
-      foodType: 'Cooked Rice & Dal',
-      quantity: '50 servings',
-      donorName: 'Community Kitchen',
-      location: 'Andheri West',
-      availableUntil: '8:00 PM today',
-      distance: '4.1 km',
-      status: 'available'
-    },
-    {
-      id: '3',
-      foodType: 'Bakery Items',
-      quantity: '30 pieces',
-      donorName: 'Sweet Treats Bakery',
-      location: 'Bandra',
-      availableUntil: '5:00 PM today',
-      distance: '1.8 km',
-      status: 'available'
-    }
-  ];
-
-  const myClaims = [
-    {
-      id: '1',
-      foodType: 'Cooked Meals',
-      quantity: '40 servings',
-      donorName: 'Hotel Paradise',
-      location: 'Colaba',
-      claimedAt: '2 hours ago',
-      status: 'approved',
-      pickupTime: '4:00 PM today'
-    },
-    {
-      id: '2',
-      foodType: 'Fruits',
-      quantity: '15 kg',
-      donorName: 'Fresh Market',
-      location: 'Dadar',
-      claimedAt: '1 day ago',
-      status: 'completed',
-      pickupTime: 'Yesterday 3:00 PM'
-    }
-  ];
 
   const notifications = [
     {
@@ -109,8 +63,8 @@ const NGODashboard = () => {
   };
 
   const filteredFood = availableFood.filter(food =>
-    food.foodType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    food.location.toLowerCase().includes(searchTerm.toLowerCase())
+    food.food_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    food.pickup_address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -120,7 +74,7 @@ const NGODashboard = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2">
-            Welcome back, {user?.name}!
+            Welcome back, {user?.displayName || 'NGO'}!
           </h1>
           <p className="text-gray-600">
             Find and claim food donations to support your community programs.
@@ -238,10 +192,10 @@ const NGODashboard = () => {
                             <Package className="w-5 h-5 text-secondary" />
                           </div>
                           <div>
-                            <h4 className="font-semibold">{food.foodType}</h4>
+                            <h4 className="font-semibold">{food.food_type}</h4>
                             <p className="text-sm text-gray-600">
                               <MapPin className="w-3 h-3 inline mr-1" />
-                              {food.location} • {food.quantity}
+                              {food.pickup_address} • {food.quantity}
                             </p>
                           </div>
                         </div>
@@ -251,7 +205,6 @@ const NGODashboard = () => {
                               Claim
                             </Button>
                           </Link>
-                          <p className="text-xs text-gray-500 mt-1">{food.distance}</p>
                         </div>
                       </div>
                     ))}
@@ -365,8 +318,8 @@ const NGODashboard = () => {
                   <CardContent className="p-6">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-lg font-semibold">{food.foodType}</h3>
-                        <p className="text-gray-600">{food.donorName}</p>
+                        <h3 className="text-lg font-semibold">{food.food_type}</h3>
+                        <p className="text-gray-600">{food.donor_name}</p>
                       </div>
                       <Badge className={getStatusColor(food.status)}>
                         {food.status}
@@ -380,11 +333,11 @@ const NGODashboard = () => {
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <MapPin className="w-4 h-4 mr-2" />
-                        {food.location} ({food.distance})
+                        {food.pickup_address}
                       </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <Clock className="w-4 h-4 mr-2" />
-                        Available until {food.availableUntil}
+                        Available until {food.expiry_time ? new Date(food.expiry_time).toLocaleString() : 'No expiry set'}
                       </div>
                     </div>
 
@@ -402,7 +355,15 @@ const NGODashboard = () => {
 
         {activeTab === 'claims' && (
           <div className="space-y-4">
-            {myClaims.map((claim) => (
+            {myClaimedDonations.length === 0 ? (
+              <Card className="text-center py-8">
+                <CardContent>
+                  <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">No Claimed Donations</h3>
+                  <p className="text-gray-600">You haven't claimed any food donations yet.</p>
+                </CardContent>
+              </Card>
+            ) : myClaimedDonations.map((claim) => (
               <Card key={claim.id}>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -411,11 +372,11 @@ const NGODashboard = () => {
                         <Package className="w-6 h-6 text-secondary" />
                       </div>
                       <div>
-                        <h4 className="font-semibold">{claim.foodType}</h4>
-                        <p className="text-sm text-gray-600">{claim.donorName}</p>
+                        <h4 className="font-semibold">{claim.food_type}</h4>
+                        <p className="text-sm text-gray-600">{claim.donor_name}</p>
                         <p className="text-sm text-gray-600">
                           <MapPin className="w-3 h-3 inline mr-1" />
-                          {claim.location} • {claim.quantity}
+                          {claim.pickup_address} • {claim.quantity}
                         </p>
                       </div>
                     </div>
@@ -424,10 +385,10 @@ const NGODashboard = () => {
                         {claim.status}
                       </Badge>
                       <p className="text-xs text-gray-500 mt-2">
-                        Pickup: {claim.pickupTime}
+                        Pickup: {('pickup_time' in claim && (claim as any).pickup_time) || (claim.preferences && 'pickup_time' in claim.preferences ? (claim.preferences as any).pickup_time : undefined) || 'TBD'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Claimed {claim.claimedAt}
+                        Claimed: {'claimed_at' in claim && (claim as any).claimed_at ? new Date((claim as any).claimed_at).toLocaleString() : ''}
                       </p>
                     </div>
                   </div>

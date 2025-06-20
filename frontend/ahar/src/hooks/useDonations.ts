@@ -24,6 +24,7 @@ export interface RawDonationData {
   status?: string;
   created_at?: string;
   preferences?: DonationPreferences;
+  claimed_by?: string;
 }
 
 export type DonationStatus = 'available' | 'claimed' | 'completed' | 'expired';
@@ -42,6 +43,7 @@ export interface DonationData {
   status: DonationStatus;
   created_at: string;
   preferences?: DonationPreferences;
+  claimed_by?: string;
 }
 
 function validateDonation(raw: RawDonationData): DonationData {
@@ -72,7 +74,8 @@ function validateDonation(raw: RawDonationData): DonationData {
     donor_phone: raw.donor_phone || '',
     status: validStatuses.includes(status) ? status : 'available',
     created_at: raw.created_at || new Date().toISOString(),
-    preferences: raw.preferences
+    preferences: raw.preferences,
+    claimed_by: raw.claimed_by,
   };
 }
 

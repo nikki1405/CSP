@@ -223,10 +223,15 @@ export default function DonorDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid gap-4 mb-8">
+        <div className="flex gap-4 mb-8">
           <Link to="/post-food">
             <Button className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" /> Post New Food Donation
+            </Button>
+          </Link>
+          <Link to="/money-donation">
+            <Button className="w-full sm:w-auto" variant="secondary">
+              <IndianRupee className="mr-2 h-4 w-4" /> Donate Money
             </Button>
           </Link>
         </div>

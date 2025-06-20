@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '@/components/common/Header';
@@ -11,128 +10,66 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, MapPin, Clock, Package, Filter, Phone } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useDonations, DonationData } from '@/hooks/useDonations';
+import { useAuth } from '@/hooks/useAuth';
+import { donationApi } from '@/lib/api';
 
 const ClaimFood = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLocation, setSelectedLocation] = useState('');
   const [selectedFoodType, setSelectedFoodType] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [selectedFood, setSelectedFood] = useState<any>(null);
+  const [selectedFood, setSelectedFood] = useState<DonationData | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { donations, isLoading, refetch } = useDonations();
+  const { user } = useAuth();
 
-  const availableFood = [
-    {
-      id: '1',
-      foodType: 'Fresh Vegetables',
-      quantity: '10 kg',
-      donorName: 'Green Garden Restaurant',
-      donorPhone: '+91 98765 43210',
-      donorEmail: 'contact@greengarden.com',
-      donorAddress: '123 MG Road, Mumbai Central, Mumbai 400008',
-      location: 'Mumbai Central',
-      pickupLocation: {
-        address: '123 MG Road, Mumbai Central, Mumbai 400008',
-        lat: 19.0176,
-        lng: 72.8562
-      },
-      availableUntil: '6:00 PM today',
-      distance: '2.3 km',
-      status: 'available',
-      description: 'Fresh mixed vegetables including carrots, beans, and cabbage. Perfect condition.',
-      photo: '/placeholder.svg'
-    },
-    {
-      id: '2',
-      foodType: 'Cooked Rice & Dal',
-      quantity: '50 servings',
-      donorName: 'Community Kitchen',
-      donorPhone: '+91 98765 43211',
-      donorEmail: 'info@communitykitchen.org',
-      donorAddress: '456 Linking Road, Andheri West, Mumbai 400058',
-      location: 'Andheri West',
-      pickupLocation: {
-        address: '456 Linking Road, Andheri West, Mumbai 400058',
-        lat: 19.1367,
-        lng: 72.8269
-      },
-      availableUntil: '8:00 PM today',
-      distance: '4.1 km',
-      status: 'available',
-      description: 'Freshly cooked rice and dal with vegetables. Hygienic preparation.',
-      photo: '/placeholder.svg'
-    },
-    {
-      id: '3',
-      foodType: 'Bakery Items',
-      quantity: '30 pieces',
-      donorName: 'Sweet Treats Bakery',
-      donorPhone: '+91 98765 43212',
-      donorEmail: 'orders@sweettreats.com',
-      donorAddress: '789 Hill Road, Bandra West, Mumbai 400050',
-      location: 'Bandra',
-      pickupLocation: {
-        address: '789 Hill Road, Bandra West, Mumbai 400050',
-        lat: 19.0596,
-        lng: 72.8295
-      },
-      availableUntil: '5:00 PM today',
-      distance: '1.8 km',
-      status: 'available',
-      description: 'Assorted bread, pastries, and cakes. All items are fresh.',
-      photo: '/placeholder.svg'
-    },
-    {
-      id: '4',
-      foodType: 'Fruits',
-      quantity: '15 kg',
-      donorName: 'Fresh Mart',
-      donorPhone: '+91 98765 43213',
-      donorEmail: 'help@freshmart.in',
-      donorAddress: '321 Shivaji Park, Dadar, Mumbai 400028',
-      location: 'Dadar',
-      pickupLocation: {
-        address: '321 Shivaji Park, Dadar, Mumbai 400028',
-        lat: 19.0198,
-        lng: 72.8431
-      },
-      availableUntil: '7:00 PM today',
-      distance: '3.2 km',
-      status: 'available',
-      description: 'Mixed seasonal fruits including apples, bananas, and oranges.',
-      photo: '/placeholder.svg'
-    }
-  ];
+  // Only show available, non-expired donations
+  const availableFood: DonationData[] = donations.filter(donation =>
+    donation.status === 'available' &&
+    (!donation.expiry_time || new Date(donation.expiry_time) > new Date())
+  );
 
-  const locations = ['All Locations', 'Mumbai Central', 'Andheri West', 'Bandra', 'Dadar', 'Colaba'];
-  const foodTypes = ['All Types', 'Vegetables', 'Cooked Food', 'Bakery Items', 'Fruits', 'Grains'];
+  // Get unique locations and food types for filters
+  const locations = ['All Locations', ...Array.from(new Set(availableFood.map(f => f.pickup_address)))]
+  const foodTypes = ['All Types', ...Array.from(new Set(availableFood.map(f => f.food_type)))]
 
   const filteredFood = availableFood.filter(food => {
-    const matchesSearch = food.foodType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         food.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         food.location.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = food.food_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         food.donor_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         food.pickup_address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesLocation = !selectedLocation || selectedLocation === 'All Locations' || 
-                           food.location === selectedLocation;
+                           food.pickup_address === selectedLocation;
     const matchesFoodType = !selectedFoodType || selectedFoodType === 'All Types' ||
-                           food.foodType.toLowerCase().includes(selectedFoodType.toLowerCase());
-    
+                           food.food_type.toLowerCase().includes(selectedFoodType.toLowerCase());
     return matchesSearch && matchesLocation && matchesFoodType;
   });
 
-  const handleClaimFood = (food: any) => {
+  const handleClaimFood = (food: DonationData) => {
     setSelectedFood(food);
     setShowConfirmation(true);
   };
 
-  const confirmClaim = () => {
-    if (selectedFood) {
-      toast({
-        title: "Food Claimed Successfully!",
-        description: `You have successfully claimed ${selectedFood.foodType}. The donor has been notified and will approve your pickup request.`,
-      });
-      setShowConfirmation(false);
-      setSelectedFood(null);
-      navigate('/ngo-dashboard');
+  const confirmClaim = async () => {
+    if (selectedFood && user) {
+      try {
+        await donationApi.claimDonation(selectedFood.id, user.uid);
+        toast({
+          title: "Food Claimed Successfully!",
+          description: `You have successfully claimed ${selectedFood.food_type}. The donor has been notified and will approve your pickup request.`,
+        });
+        setShowConfirmation(false);
+        setSelectedFood(null);
+        await refetch();
+        navigate('/ngo-dashboard');
+      } catch (error: any) {
+        toast({
+          title: "Error claiming food",
+          description: error.message || 'Failed to claim food',
+          variant: 'destructive',
+        });
+      }
     }
   };
 
@@ -142,13 +79,31 @@ const ClaimFood = () => {
   };
 
   if (showConfirmation && selectedFood) {
+    // Map DonationData to the expected ClaimConfirmation prop shape
+    const confirmationFood = {
+      id: selectedFood.id,
+      foodType: selectedFood.food_type,
+      quantity: selectedFood.quantity,
+      donorName: selectedFood.donor_name,
+      donorPhone: selectedFood.donor_phone,
+      donorEmail: '', // Not available in DonationData
+      donorAddress: selectedFood.pickup_address,
+      pickupLocation: {
+        address: selectedFood.pickup_address,
+        lat: 0, // Not available in DonationData
+        lng: 0  // Not available in DonationData
+      },
+      availableUntil: selectedFood.expiry_time ? new Date(selectedFood.expiry_time).toLocaleString() : 'No expiry set',
+      description: selectedFood.description,
+      photo: '/placeholder.svg',
+    };
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-6xl mx-auto">
             <ClaimConfirmation 
-              food={selectedFood}
+              food={confirmationFood}
               onConfirm={confirmClaim}
               onCancel={cancelClaim}
             />
@@ -223,10 +178,11 @@ const ClaimFood = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {filteredFood.map((food) => (
             <Card key={food.id} className="hover:shadow-lg transition-shadow">
+              {/* You can add a photo property to DonationData if available, or use a placeholder */}
               <div className="relative">
                 <img
-                  src={food.photo}
-                  alt={food.foodType}
+                  src={"/placeholder.svg"}
+                  alt={food.food_type}
                   className="w-full h-48 object-cover rounded-t-lg"
                 />
                 <Badge className="absolute top-3 right-3 bg-green-100 text-green-800">
@@ -236,12 +192,10 @@ const ClaimFood = () => {
               <CardContent className="p-6">
                 <div className="flex justify-between items-start mb-3">
                   <div>
-                    <h3 className="text-lg font-semibold">{food.foodType}</h3>
-                    <p className="text-gray-600 text-sm">{food.donorName}</p>
+                    <h3 className="text-lg font-semibold">{food.food_type}</h3>
+                    <p className="text-gray-600 text-sm">{food.donor_name}</p>
                   </div>
-                  <span className="text-sm text-gray-500">{food.distance}</span>
                 </div>
-                
                 <div className="space-y-2 mb-4">
                   <div className="flex items-center text-sm text-gray-600">
                     <Package className="w-4 h-4 mr-2" />
@@ -249,24 +203,16 @@ const ClaimFood = () => {
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPin className="w-4 h-4 mr-2" />
-                    {food.location}
+                    {food.pickup_address}
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="w-4 h-4 mr-2" />
-                    Available until {food.availableUntil}
+                    Available until {food.expiry_time ? new Date(food.expiry_time).toLocaleString() : 'No expiry set'}
                   </div>
-                  {food.donorPhone && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Phone className="w-4 h-4 mr-2" />
-                      Contact available
-                    </div>
-                  )}
                 </div>
-
                 <p className="text-sm text-gray-600 mb-4 line-clamp-2">
                   {food.description}
                 </p>
-
                 <Button 
                   className="w-full bg-secondary hover:bg-secondary-dark"
                   onClick={() => handleClaimFood(food)}

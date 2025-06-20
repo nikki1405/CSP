@@ -115,16 +115,21 @@ class FoodDonationViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        ngo_id = request.data.get('ngo_id')
+        if not ngo_id:
+            return Response({"error": "ngo_id is required in request body"}, status=status.HTTP_400_BAD_REQUEST)
+        
         # Update the donation status and add claiming NGO details
         update_data = {
             'status': 'claimed',
-            'claimed_by': request.data.get('ngo_id'),
-            'claimed_at': timezone.now(),
+            'claimed_by': ngo_id,
+            'claimed_at': timezone.now().isoformat(),
         }
         
         doc_ref.update(update_data)
         
-        return Response({**donation_data, **update_data})
+        updated_doc = doc_ref.get()
+        return Response(updated_doc.to_dict())
 
     @action(detail=True, methods=['post'])
     def complete(self, request, pk=None):
@@ -171,3 +176,21 @@ class FoodDonationViewSet(viewsets.ViewSet):
             return Response(updated_doc.to_dict())
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def my_claims(self, request):
+        """List all donations claimed by the current NGO (status='claimed' and claimed_by=ngo_id)"""
+        ngo_id = request.query_params.get('ngo_id')
+        if not ngo_id:
+            return Response({"error": "ngo_id is required as a query parameter"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # Use positional arguments for .where() for compatibility
+            docs = db.collection('food_donations')\
+                .where('status', '==', 'claimed')\
+                .where('claimed_by', '==', ngo_id).stream()
+            donations = [doc.to_dict() for doc in docs]
+            logger.info(f"Retrieved {len(donations)} claimed donations for NGO {ngo_id}")
+            return Response(donations)
+        except Exception as e:
+            logger.error(f"Error retrieving claimed donations: {str(e)}")
+            return Response({"error": "Failed to retrieve claimed donations"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

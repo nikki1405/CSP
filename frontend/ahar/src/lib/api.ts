@@ -29,6 +29,7 @@ export interface DonationData {
   preferences?: {
     special_instructions?: string;
   };
+  claimed_by?: string;
 }
 
 export const donationApi = {
@@ -145,5 +146,34 @@ export const donationApi = {
       console.error('Update food error:', error);
       throw error.response?.data || error.message;
     }
-  }
+  },
+
+  async claimDonation(id: string, ngoId: string) {
+    try {
+      // Get current donation
+      const getCurrentResponse = await axios.get<DonationData>(`${API_BASE_URL}/donations/${id}/`);
+      const currentDonation = getCurrentResponse.data;
+      // Update status to claimed and set claiming NGO
+      const updateData: Partial<DonationData> = {
+        ...currentDonation,
+        status: 'claimed',
+        claimed_by: ngoId,
+      };
+      const response = await axios.put<DonationData>(`${API_BASE_URL}/donations/${id}/`, updateData);
+      return response.data;
+    } catch (error: any) {
+      console.error('Claim donation error:', error);
+      throw error.response?.data || error.message;
+    }
+  },
+
+  async listMyClaims(ngoId: string) {
+    try {
+      const response = await axios.get<DonationData[]>(`${API_BASE_URL}/donations/my_claims/?ngo_id=${ngoId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error('List my claims error:', error);
+      throw error.response?.data || error.message;
+    }
+  },
 };
