@@ -176,4 +176,20 @@ export const donationApi = {
       throw error.response?.data || error.message;
     }
   },
+
+  async listDonationsByDonor(donorId: string) {
+    const res = await fetch(`${API_BASE_URL}/donations/?donor_id=${encodeURIComponent(donorId)}`);
+    if (!res.ok) throw new Error('Failed to fetch donor donations');
+    return res.json();
+  },
+
+  async completeDonation(id: string) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/donations/${id}/complete/`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Complete donation error:', error);
+      throw error.response?.data || error.message;
+    }
+  },
 };

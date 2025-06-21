@@ -17,21 +17,17 @@ import EditDonation from '@/pages/EditDonation';
 
 export default function DonorDashboard() {
   const { user } = useAuth();
-  const { donations, isLoading, refetch } = useDonations();
+  // Use the updated useDonations hook with donorId
+  // TEMP: Use 'test123' to show all legacy/test data
+  const { donations, isLoading, refetch } = useDonations('test123');
   const { toast } = useToast();
   const navigate = useNavigate();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   
-  console.log('Current user:', user);
-  console.log('All donations:', donations);
-  
-  // Filter donations for the current user and exclude expired ones
+  // Show all donations for this donor, regardless of status (except expired if desired)
   const myDonations = donations.filter(donation => {
-    console.log('Checking donation:', donation);
-    // For testing, we're using the hardcoded donor_id since that's what we used in PostFood
-    return donation.donor_id === 'test123' &&
-           (donation.status === 'available' || donation.status === 'claimed' || donation.status === 'completed') &&
-           (!donation.expiry_time || new Date(donation.expiry_time) > new Date());
+    // TEMP: Show donations for current user or legacy test123
+    return (donation.donor_id === user?.uid || donation.donor_id === 'test123') && (!donation.expiry_time || new Date(donation.expiry_time) > new Date());
   });
   
   // Calculate statistics
@@ -128,7 +124,7 @@ export default function DonorDashboard() {
       'No expiry set';
 
     return (
-      <Card key={donation.id} className="mb-4">
+      <Card key={donation.id} className="mb-4 bg-gradient-to-br from-purple-100 to-pink-100 shadow-md border-0">
         <CardContent className="pt-6">
           <div className="flex justify-between items-start mb-4">
             <div>
@@ -213,24 +209,24 @@ export default function DonorDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-100">
       <Header />
       <main className="container mx-auto py-8 px-4">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold">Welcome back, {user?.displayName || 'Donor'}!</h1>
-          <p className="text-gray-600 mt-2">Manage your food donations and track their status.</p>
+          <h1 className="text-3xl font-bold text-purple-800 drop-shadow">Welcome back, {user?.displayName || 'Donor'}!</h1>
+          <p className="text-gray-700 mt-2">Manage your food donations and track their status.</p>
         </div>
 
         {/* Quick Actions */}
         <div className="flex gap-4 mb-8">
           <Link to="/post-food">
-            <Button className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md hover:from-purple-600 hover:to-pink-600">
               <Plus className="mr-2 h-4 w-4" /> Post New Food Donation
             </Button>
           </Link>
           <Link to="/money-donation">
-            <Button className="w-full sm:w-auto" variant="secondary">
+            <Button className="w-full sm:w-auto bg-gradient-to-r from-green-400 to-blue-400 text-white shadow-md hover:from-green-500 hover:to-blue-500">
               <IndianRupee className="mr-2 h-4 w-4" /> Donate Money
             </Button>
           </Link>
@@ -238,72 +234,61 @@ export default function DonorDashboard() {
 
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-100 to-pink-100 shadow-md border-0">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Total Donations
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-purple-700">Total Donations</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
-                <Package className="h-8 w-8 text-blue-500 mr-2" />
-                <span className="text-2xl font-bold">{stats.totalDonations}</span>
+                <Package className="h-8 w-8 text-purple-500 mr-2" />
+                <span className="text-2xl font-bold text-purple-800">{stats.totalDonations}</span>
               </div>
             </CardContent>
           </Card>
-
-          <Card>
+          <Card className="bg-gradient-to-br from-green-100 to-blue-100 shadow-md border-0">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Active Donations
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-green-700">Active Donations</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
                 <TrendingUp className="h-8 w-8 text-green-500 mr-2" />
-                <span className="text-2xl font-bold">{stats.activeDonations}</span>
+                <span className="text-2xl font-bold text-green-800">{stats.activeDonations}</span>
               </div>
             </CardContent>
           </Card>
-
-          <Card>
+          <Card className="bg-gradient-to-br from-orange-100 to-yellow-100 shadow-md border-0">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Claimed
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-orange-700">Claimed</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
                 <Users className="h-8 w-8 text-orange-500 mr-2" />
-                <span className="text-2xl font-bold">{stats.claimedDonations}</span>
+                <span className="text-2xl font-bold text-orange-800">{stats.claimedDonations}</span>
               </div>
             </CardContent>
           </Card>
-
-          <Card>
+          <Card className="bg-gradient-to-br from-purple-100 to-gray-100 shadow-md border-0">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-gray-500">
-                Completed
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-purple-700">Completed</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center">
                 <CheckCircle className="h-8 w-8 text-purple-500 mr-2" />
-                <span className="text-2xl font-bold">{stats.completedDonations}</span>
+                <span className="text-2xl font-bold text-purple-800">{stats.completedDonations}</span>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* My Posts Section */}
-        <Card className="mb-8">
+        {/* All My Donations Section */}
+        <Card className="mb-8 bg-white/80 shadow-lg border-0">
           <CardHeader>
-            <CardTitle>My Posts</CardTitle>
+            <CardTitle className="text-lg font-semibold text-purple-800">All My Donations</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="text-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+                <Loader2 className="h-8 w-8 animate-spin mx-auto text-purple-500" />
                 <p className="text-gray-600 mt-2">Loading your donations...</p>
               </div>
             ) : donations.length === 0 ? (
@@ -314,7 +299,7 @@ export default function DonorDashboard() {
               <div className="text-center py-8">
                 <p className="text-gray-600">You haven't posted any donations yet.</p>
                 <Link to="/post-food">
-                  <Button variant="outline" className="mt-4">
+                  <Button variant="outline" className="mt-4 border-purple-400 text-purple-700">
                     <Plus className="mr-2 h-4 w-4" /> Post Your First Donation
                   </Button>
                 </Link>
@@ -322,7 +307,6 @@ export default function DonorDashboard() {
             ) : (
               <div className="space-y-4">
                 {myDonations.map((donation, index) => {
-                  console.log(`Rendering donation ${index}:`, donation);
                   return renderDonationCard(donation);
                 })}
               </div>

@@ -24,21 +24,27 @@ const NGODashboard = () => {
     (!donation.expiry_time || new Date(donation.expiry_time) > new Date())
   );
 
-  // Mock data for NGO stats
+  // Calculate stats from real claimed donations
   const stats = {
-    totalClaimed: 15,
-    activeClaims: 4,
-    completedClaims: 11,
-    peopleServed: 234
+    totalClaimed: myClaimedDonations.length,
+    activeClaims: myClaimedDonations.filter(d => d.status === 'claimed').length,
+    completedClaims: myClaimedDonations.filter(d => d.status === 'completed').length,
+    peopleServed: 234 // Keep as mock or update if you have real data
   };
 
+  // Notification generator for NGO
   const notifications = [
-    {
-      id: '1',
-      message: 'Your claim for Rice & Dal has been approved',
-      time: '30 minutes ago',
-      type: 'approval'
-    },
+    ...myClaimedDonations
+      .filter(d => d.status === 'claimed' || d.status === 'completed')
+      .map(d => ({
+        id: d.id,
+        message:
+          d.status === 'claimed'
+            ? `You have claimed ${d.food_type} from ${d.donor_name}. Await pickup.`
+            : `You have completed serving ${d.food_type} from ${d.donor_name}.`,
+        time: (d as any).claimed_at ? new Date((d as any).claimed_at).toLocaleString() : '',
+        type: d.status,
+      })),
     {
       id: '2',
       message: 'New food available near your location',
@@ -68,15 +74,14 @@ const NGODashboard = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-100">
       <Header />
-      
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-heading font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl font-heading font-bold text-purple-800 drop-shadow mb-2">
             Welcome back, {user?.displayName || 'NGO'}!
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-700">
             Find and claim food donations to support your community programs.
           </p>
         </div>
@@ -84,56 +89,55 @@ const NGODashboard = () => {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <Link to="/claim-food">
-            <Card className="card-hover cursor-pointer border-2 border-dashed border-secondary/30 hover:border-secondary">
+            <Card className="card-hover cursor-pointer border-2 border-dashed border-secondary/30 hover:border-secondary bg-gradient-to-br from-purple-100 to-pink-100 shadow-md">
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
                   <Search className="w-6 h-6 text-secondary" />
                 </div>
-                <h3 className="font-semibold mb-2">Browse Food</h3>
+                <h3 className="font-semibold mb-2 text-purple-800">Browse Food</h3>
                 <p className="text-sm text-gray-600">Find available food donations</p>
               </CardContent>
             </Card>
           </Link>
 
           <Link to="/money-received">
-            <Card className="card-hover cursor-pointer border-2 border-dashed border-green-300 hover:border-green-500">
+            <Card className="card-hover cursor-pointer border-2 border-dashed border-green-300 hover:border-green-500 bg-gradient-to-br from-green-100 to-blue-100 shadow-md">
               <CardContent className="flex flex-col items-center justify-center p-6 text-center">
                 <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
-                  {/* Use IndianRupee icon */}
                   <IndianRupee className="w-6 h-6 text-green-600" />
                 </div>
-                <h3 className="font-semibold mb-2">Money Received</h3>
+                <h3 className="font-semibold mb-2 text-green-800">Money Received</h3>
                 <p className="text-sm text-gray-600">Track monetary donations</p>
               </CardContent>
             </Card>
           </Link>
 
-          <Card className="card-hover">
+          <Card className="card-hover bg-gradient-to-br from-purple-100 to-pink-100 shadow-md">
             <CardContent className="flex flex-col items-center justify-center p-6 text-center">
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
                 <Package className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="font-semibold mb-2">{stats.totalClaimed}</h3>
+              <h3 className="font-semibold mb-2 text-purple-800">{stats.totalClaimed}</h3>
               <p className="text-sm text-gray-600">Total Claims</p>
             </CardContent>
           </Card>
 
-          <Card className="card-hover">
+          <Card className="card-hover bg-gradient-to-br from-orange-100 to-yellow-100 shadow-md">
             <CardContent className="flex flex-col items-center justify-center p-6 text-center">
               <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mb-4">
                 <Clock className="w-6 h-6 text-yellow-600" />
               </div>
-              <h3 className="font-semibold mb-2">{stats.activeClaims}</h3>
+              <h3 className="font-semibold mb-2 text-orange-800">{stats.activeClaims}</h3>
               <p className="text-sm text-gray-600">Active Claims</p>
             </CardContent>
           </Card>
 
-          <Card className="card-hover">
+          <Card className="card-hover bg-gradient-to-br from-green-100 to-blue-100 shadow-md">
             <CardContent className="flex flex-col items-center justify-center p-6 text-center">
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
                 <Users className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="font-semibold mb-2">{stats.peopleServed}</h3>
+              <h3 className="font-semibold mb-2 text-green-800">{stats.peopleServed}</h3>
               <p className="text-sm text-gray-600">People Served</p>
             </CardContent>
           </Card>

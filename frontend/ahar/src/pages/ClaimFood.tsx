@@ -62,7 +62,8 @@ const ClaimFood = () => {
         setShowConfirmation(false);
         setSelectedFood(null);
         await refetch();
-        navigate('/ngo-dashboard');
+        // Route to completion page after claim
+        navigate(`/complete-claim/${selectedFood.id}`);
       } catch (error: any) {
         toast({
           title: "Error claiming food",

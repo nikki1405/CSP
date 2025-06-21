@@ -79,7 +79,7 @@ function validateDonation(raw: RawDonationData): DonationData {
   };
 }
 
-export function useDonations() {
+export function useDonations(donorId?: string) {
   const [donations, setDonations] = useState<DonationData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -88,7 +88,14 @@ export function useDonations() {
     try {
       setIsLoading(true);
       setError(null);
-      const response = await donationApi.listDonations();
+      let response;
+      if (donorId) {
+        // Fetch all donations for this donor, regardless of status
+        response = await donationApi.listDonationsByDonor(donorId);
+      } else {
+        // Fetch all donations (for NGO or general listing)
+        response = await donationApi.listDonations();
+      }
       
       // Filter out any invalid donations and validate the rest
       const validDonations = response
@@ -110,7 +117,7 @@ export function useDonations() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [donorId]);
 
   useEffect(() => {
     fetchDonations();

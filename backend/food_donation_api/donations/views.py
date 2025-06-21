@@ -58,17 +58,21 @@ class FoodDonationViewSet(viewsets.ViewSet):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request):
-        """List all available food donations"""
+        """List all available food donations, or all for a donor if donor_id is provided"""
+        donor_id = request.query_params.get('donor_id')
         try:
-            # Query Firestore for available donations
-            docs = db.collection('food_donations').where('status', '==', 'available').stream()
-            
+            if donor_id:
+                # Query all donations for this donor (all statuses)
+                docs = db.collection('food_donations').where('donor_id', '==', donor_id).stream()
+            else:
+                # Query Firestore for available donations
+                docs = db.collection('food_donations').where('status', '==', 'available').stream()
             donations = []
             for doc in docs:
                 donation_data = doc.to_dict()
                 donations.append(donation_data)
             
-            logger.info(f"Retrieved {len(donations)} available donations")
+            logger.info(f"Retrieved {len(donations)} donations (donor_id={donor_id})")
             return Response(donations)
         except Exception as e:
             logger.error(f"Error retrieving donations: {str(e)}")
