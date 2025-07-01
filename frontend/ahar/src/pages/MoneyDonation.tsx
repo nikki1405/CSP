@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
@@ -22,11 +22,56 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
+// Get PayPal client ID from environment variable injected by backend
+const PAYPAL_CLIENT_ID = (window as any).PAYPAL_CLIENT_ID || "YOUR_SANDBOX_CLIENT_ID";
+
 const MoneyDonation = () => {
   const { user } = useAuth();
   const [amount, setAmount] = useState('');
   const [selectedNGO, setSelectedNGO] = useState('');
   const [showQRScanner, setShowQRScanner] = useState(false);
+
+  const paypalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!paypalRef.current) return;
+
+    // Dynamically load PayPal SDK
+    const script = document.createElement("script");
+    script.src = `https://www.paypal.com/sdk/js?client-id=${PAYPAL_CLIENT_ID}`;
+    script.async = true;
+    script.onload = () => {
+      // @ts-ignore
+      window.paypal.Buttons({
+        createOrder: function (data: any, actions: any) {
+          return fetch("/api/donations/create-order/", {
+            method: "post",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: amount, // from your state
+              ngo: selectedNGO // optional, if you want to track which NGO
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => data.id);
+        },
+        onApprove: function (data: any, actions: any) {
+          return fetch(`/api/donations/capture-order/${data.orderID}/`, { method: "post" })
+            .then((res) => res.json())
+            .then((details) => {
+              alert("Transaction completed by " + details.payer.name.given_name);
+              // Optionally refresh payment history or show a success message
+            });
+        },
+      }).render(paypalRef.current);
+    };
+    document.body.appendChild(script);
+
+    // Cleanup
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   // Mock data for NGOs
   const ngos = [
@@ -215,6 +260,11 @@ const MoneyDonation = () => {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-2">Or pay with PayPal</h2>
+          <div ref={paypalRef} id="paypal-button-container"></div>
         </div>
       </div>
       <Footer />

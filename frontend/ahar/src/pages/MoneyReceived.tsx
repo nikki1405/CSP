@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Header from '@/components/common/Header';
@@ -19,58 +18,26 @@ import {
   Search
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useMoneyReceived } from '@/hooks/useMoneyReceived';
 
 const MoneyReceived = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [searchTerm, setSearchTerm] = useState('');
+  const ngoId = user?.uid;
+  const { donations, loading, error } = useMoneyReceived(ngoId);
 
-  // Mock data for donations received
-  const donationsReceived = [
-    {
-      id: '1',
-      amount: 500,
-      donorName: 'Rajesh Kumar',
-      donorEmail: 'rajesh.kumar@email.com',
-      donorPhone: '+91 98765 43210',
-      donorAddress: 'Mumbai Central, Mumbai',
-      date: '2024-01-15',
-      transactionId: 'TXN123456789',
-      purpose: 'General Fund'
-    },
-    {
-      id: '2',
-      amount: 1000,
-      donorName: 'Priya Sharma',
-      donorEmail: 'priya.sharma@email.com',
-      donorPhone: '+91 87654 32109',
-      donorAddress: 'Andheri West, Mumbai',
-      date: '2024-01-14',
-      transactionId: 'TXN123456788',
-      purpose: 'Food Program'
-    },
-    {
-      id: '3',
-      amount: 750,
-      donorName: 'Amit Patel',
-      donorEmail: 'amit.patel@email.com',
-      donorPhone: '+91 76543 21098',
-      donorAddress: 'Bandra, Mumbai',
-      date: '2024-01-12',
-      transactionId: 'TXN123456787',
-      purpose: 'Emergency Relief'
-    }
-  ];
+  // Calculate stats from real data
+  const totalReceived = donations.reduce((sum, d) => sum + d.amount, 0);
+  const totalDonors = new Set(donations.map(d => d.donorEmail)).size;
+  const thisMonth = donations.filter(d => {
+    const date = new Date(d.date);
+    const now = new Date();
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  }).reduce((sum, d) => sum + d.amount, 0);
+  const avgDonation = donations.length ? Math.round(totalReceived / donations.length) : 0;
 
-  // Mock stats
-  const stats = {
-    totalReceived: 15750,
-    totalDonors: 12,
-    thisMonth: 5250,
-    avgDonation: 1312
-  };
-
-  const filteredDonations = donationsReceived.filter(donation =>
+  const filteredDonations = donations.filter(donation =>
     donation.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     donation.purpose.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -100,7 +67,7 @@ const MoneyReceived = () => {
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mb-4">
                 <DollarSign className="w-6 h-6 text-green-600" />
               </div>
-              <h3 className="font-semibold mb-2">₹{stats.totalReceived.toLocaleString()}</h3>
+              <h3 className="font-semibold mb-2">₹{totalReceived.toLocaleString()}</h3>
               <p className="text-sm text-gray-600">Total Received</p>
             </CardContent>
           </Card>
@@ -110,7 +77,7 @@ const MoneyReceived = () => {
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-4">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
-              <h3 className="font-semibold mb-2">{stats.totalDonors}</h3>
+              <h3 className="font-semibold mb-2">{totalDonors}</h3>
               <p className="text-sm text-gray-600">Total Donors</p>
             </CardContent>
           </Card>
@@ -120,7 +87,7 @@ const MoneyReceived = () => {
               <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
                 <TrendingUp className="w-6 h-6 text-orange-600" />
               </div>
-              <h3 className="font-semibold mb-2">₹{stats.thisMonth.toLocaleString()}</h3>
+              <h3 className="font-semibold mb-2">₹{thisMonth.toLocaleString()}</h3>
               <p className="text-sm text-gray-600">This Month</p>
             </CardContent>
           </Card>
@@ -130,7 +97,7 @@ const MoneyReceived = () => {
               <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-4">
                 <DollarSign className="w-6 h-6 text-purple-600" />
               </div>
-              <h3 className="font-semibold mb-2">₹{stats.avgDonation}</h3>
+              <h3 className="font-semibold mb-2">₹{avgDonation}</h3>
               <p className="text-sm text-gray-600">Avg Donation</p>
             </CardContent>
           </Card>
@@ -171,7 +138,7 @@ const MoneyReceived = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {donationsReceived.slice(0, 3).map((donation) => (
+                  {donations.slice(0, 3).map((donation) => (
                     <div key={donation.id} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
@@ -226,7 +193,7 @@ const MoneyReceived = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {donationsReceived.slice(0, 3).map((donation, index) => (
+                    {donations.slice(0, 3).map((donation, index) => (
                       <div key={donation.id} className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-semibold">

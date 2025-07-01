@@ -198,3 +198,50 @@ class FoodDonationViewSet(viewsets.ViewSet):
         except Exception as e:
             logger.error(f"Error retrieving claimed donations: {str(e)}")
             return Response({"error": "Failed to retrieve claimed donations"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+# views.py
+from django.http import JsonResponse
+from .paypal import PayPalClient
+from paypalcheckoutsdk.orders import OrdersCreateRequest
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+import json
+
+@csrf_exempt
+@require_POST
+def create_order(request):
+    data = json.loads(request.body)
+    amount = data.get("amount")
+    if not amount:
+        return JsonResponse({"error": "Amount is required"}, status=400)
+    # Optionally get NGO info here
+
+    paypal_client = PayPalClient()
+    request_data = OrdersCreateRequest()
+    request_data.headers["prefer"] = "return=representation"
+    request_data.request_body(
+        {
+            "intent": "CAPTURE",
+            "purchase_units": [
+                {
+                    "amount": {
+                        "currency_code": "USD",  # Or INR if supported by your PayPal account
+                        "value": str(amount)
+                    }
+                }
+            ]
+        }
+    )
+
+    response = paypal_client.client.execute(request_data)
+    order = response.result
+    return JsonResponse({"id": order.id})
+
+
+from paypalcheckoutsdk.orders import OrdersCaptureRequest
+
+def capture_order(request, order_id):
+    paypal_client = PayPalClient()
+    request_data = OrdersCaptureRequest(order_id)
+    response = paypal_client.client.execute(request_data)
+    return JsonResponse(response.result.__dict__)
